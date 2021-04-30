@@ -14,7 +14,7 @@ use PoPSchema\CustomPosts\Facades\CustomPostTypeAPIFacade;
 use PoPSchema\CustomPostTagMutations\MutationResolvers\MutationInputProperties;
 use PoPSchema\CustomPostTagMutations\TypeAPIs\CustomPostTagTypeMutationAPIInterface;
 
-abstract class AbstractCustomPostMutationResolverHooks extends AbstractHookSet
+abstract class AbstractCustomPostMutationResolverHookSet extends AbstractHookSet
 {
     protected function init(): void
     {
