@@ -2,59 +2,63 @@
 
 declare(strict_types=1);
 
-namespace PoPSchema\CustomPostTagMutations\FieldResolvers;
+namespace PoPSchema\CustomPostTagMutations\FieldResolvers\ObjectType;
 
-use PoP\ComponentModel\FieldResolvers\AbstractDBDataFieldResolver;
+use PoP\ComponentModel\FieldResolvers\ObjectType\AbstractQueryableFieldResolver;
 use PoP\ComponentModel\Schema\SchemaDefinition;
-use PoP\ComponentModel\Schema\SchemaTypeModifiers;
 use PoP\ComponentModel\TypeResolvers\ObjectType\ObjectTypeResolverInterface;
+use PoP\Engine\ComponentConfiguration as EngineComponentConfiguration;
+use PoP\Engine\TypeResolvers\ObjectType\RootTypeResolver;
 use PoPSchema\CustomPostTagMutations\MutationResolvers\MutationInputProperties;
 
-abstract class AbstractCustomPostFieldResolver extends AbstractDBDataFieldResolver
+abstract class AbstractRootFieldResolver extends AbstractQueryableFieldResolver
 {
     use SetTagsOnCustomPostFieldResolverTrait;
 
     public function getObjectTypeResolverClassesToAttachTo(): array
     {
         return [
-            $this->getCustomPostTypeResolverClass(),
+            RootTypeResolver::class,
         ];
     }
 
     public function getFieldNamesToResolve(): array
     {
+        if (EngineComponentConfiguration::disableRedundantRootTypeMutationFields()) {
+            return [];
+        }
         return [
-            'setTags',
+            $this->getSetTagsFieldName(),
         ];
     }
+
+    abstract protected function getSetTagsFieldName(): string;
 
     public function getSchemaFieldDescription(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         $descriptions = [
-            'setTags' => sprintf(
-                $this->translationAPI->__('Set tags on the %s', 'custompost-tag-mutations'),
+            $this->getSetTagsFieldName() => sprintf(
+                $this->translationAPI->__('Set tags on a %s', 'custompost-tag-mutations'),
                 $this->getEntityName()
-            )
+            ),
         ];
         return $descriptions[$fieldName] ?? parent::getSchemaFieldDescription($objectTypeResolver, $fieldName);
-    }
-
-    public function getSchemaFieldTypeModifiers(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?int
-    {
-        $nonNullableFieldNames = [
-            'setTags',
-        ];
-        if (in_array($fieldName, $nonNullableFieldNames)) {
-            return SchemaTypeModifiers::NON_NULLABLE;
-        }
-        return parent::getSchemaFieldTypeModifiers($objectTypeResolver, $fieldName);
     }
 
     public function getSchemaFieldArgs(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): array
     {
         switch ($fieldName) {
-            case 'setTags':
+            case $this->getSetTagsFieldName():
                 return [
+                    [
+                        SchemaDefinition::ARGNAME_NAME => MutationInputProperties::CUSTOMPOST_ID,
+                        SchemaDefinition::ARGNAME_TYPE => SchemaDefinition::TYPE_ID,
+                        SchemaDefinition::ARGNAME_DESCRIPTION => sprintf(
+                            $this->translationAPI->__('The ID of the %s', 'custompost-tag-mutations'),
+                            $this->getEntityName()
+                        ),
+                        SchemaDefinition::ARGNAME_MANDATORY => true,
+                    ],
                     [
                         SchemaDefinition::ARGNAME_NAME => MutationInputProperties::TAGS,
                         SchemaDefinition::ARGNAME_TYPE => SchemaDefinition::TYPE_STRING,
@@ -73,48 +77,10 @@ abstract class AbstractCustomPostFieldResolver extends AbstractDBDataFieldResolv
         return parent::getSchemaFieldArgs($objectTypeResolver, $fieldName);
     }
 
-    /**
-     * Validated the mutation on the resultItem because the ID
-     * is obtained from the same object, so it's not originally
-     * present in $form_data
-     */
-    public function validateMutationOnResultItem(
-        ObjectTypeResolverInterface $objectTypeResolver,
-        string $fieldName
-    ): bool {
-        switch ($fieldName) {
-            case 'setTags':
-                return true;
-        }
-        return parent::validateMutationOnResultItem($objectTypeResolver, $fieldName);
-    }
-
-    protected function getFieldArgsToExecuteMutation(
-        array $fieldArgs,
-        ObjectTypeResolverInterface $objectTypeResolver,
-        object $resultItem,
-        string $fieldName
-    ): array {
-        $fieldArgs = parent::getFieldArgsToExecuteMutation(
-            $fieldArgs,
-            $objectTypeResolver,
-            $resultItem,
-            $fieldName
-        );
-        $customPost = $resultItem;
-        switch ($fieldName) {
-            case 'setTags':
-                $fieldArgs[MutationInputProperties::CUSTOMPOST_ID] = $objectTypeResolver->getID($customPost);
-                break;
-        }
-
-        return $fieldArgs;
-    }
-
     public function resolveFieldMutationResolverClass(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         switch ($fieldName) {
-            case 'setTags':
+            case $this->getSetTagsFieldName():
                 return $this->getTypeMutationResolverClass();
         }
 
@@ -124,7 +90,7 @@ abstract class AbstractCustomPostFieldResolver extends AbstractDBDataFieldResolv
     public function getFieldTypeResolverClass(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         switch ($fieldName) {
-            case 'setTags':
+            case $this->getSetTagsFieldName():
                 return $this->getCustomPostTypeResolverClass();
         }
 
