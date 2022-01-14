@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace PoPSchema\CustomPostTagMutations\Hooks;
 
-use PoP\BasicService\AbstractHookSet;
+use PoP\Root\App;
+use PoP\Root\Hooks\AbstractHookSet;
 use PoPSchema\CustomPostMutations\MutationResolvers\AbstractCreateUpdateCustomPostMutationResolver;
 use PoPSchema\CustomPosts\TypeAPIs\CustomPostTypeAPIInterface;
 use PoPSchema\CustomPostTagMutations\MutationResolvers\MutationInputProperties;
@@ -25,7 +26,7 @@ abstract class AbstractMutationResolverHookSet extends AbstractHookSet
 
     protected function init(): void
     {
-        $this->getHooksAPI()->addAction(
+        App::addAction(
             AbstractCreateUpdateCustomPostMutationResolver::HOOK_EXECUTE_CREATE_OR_UPDATE,
             array($this, 'maybeSetTags'),
             10,
